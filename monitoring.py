@@ -142,10 +142,10 @@ def main():
      
     while True:
 
-        cur_time = datetime.datetime.now().hour
+        # cur_time = datetime.datetime.now().hour
         # print(cur_time,"time", int(cur_time))
-        if int(cur_time)>=22 or int(cur_time) < 1 :
-            continue
+        # if int(cur_time)>=22 or int(cur_time) < 1 :
+        #     continue
         time.sleep(10)
         with open(file=str(settings.BASE_DIR / 'utils/settings_attrs.txt'),  mode='r', encoding='utf-8') as f:
             settings_attrs = f.read()
@@ -164,7 +164,7 @@ def main():
         FROM = setting['email_address']
         PSW = setting['psw']
         varience = setting['variable_price']
-
+        print("from",FROM,"pw",PSW)
         try:
             conn = psycopg2.connect(
                 database = params['db_name'],
@@ -201,13 +201,13 @@ def main():
             rows = cur.fetchall()
             title = "商品の価格変動！\n"
             mail_text = ''
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
                 futures = []
                 for row in rows:
                     # re_time = datetime.datetime.now().hour
                     # print(re_time,"time", int(re_time))
                     # if int(re_time)>=22 or int(re_time) < 1 :
-                    #     continue
+                    #     break
                     # try:
                     pid = str(row[0])
                     url = row[5]
@@ -218,9 +218,9 @@ def main():
                         continue
 
                     
-                    # if pid != '2028':
+                    # if pid != '2041' or pid != '1984':
                     #     continue
-                    # if pan_id > int(pid) :
+                    # # if pan_id > int(pid) :
                     #     continue
                     print(pid, "pan", pan_id)
                     
@@ -243,7 +243,12 @@ def main():
 
                     
                 pp=0
+                
                 for future in concurrent.futures.as_completed(futures):
+                    re1_time = datetime.datetime.now().hour
+                    # print(re_time,"time", int(re_time))
+                    # if int(re1_time)>=22 or int(re1_time) < 1 :
+                    #     break
                     try:
                         pp+=1
                         data = {}
@@ -266,7 +271,20 @@ def main():
 
                             cur.execute(sql)
                             conn.commit()
-
+                            # del_title= "delete alarm"
+                            # del_message= ''
+                            # if ebay_url != '':
+                            #     del_ebay_title=get_ebay_title(ebay_url, ebay_setting)
+                            # del_message += '【eBay】' + "\n"
+                            # if del_ebay_title != False :
+                            #     del_message += 'タイトル：' + del_ebay_title + "\n"
+                            # if del_ebay_title == False :
+                            #     del_message += 'タイトル：' + row[3] + "\n"
+                            
+                            # del_message += 'URL: ' + ebay_url + "\n"
+                            # del_message += '【フリマ】' +data['row'][5]+ "\n"
+                            
+                            # send_mail(FROM, PSW, TO, del_title, del_message)
                             # set ebay product quantity 0
                             if ebay_url != '':
                                 revise_item(ebay_url, ebay_setting)
@@ -294,12 +312,12 @@ def main():
                                 if ebay_title != False :
                                     mail_text += 'タイトル：' + ebay_title + "\n"
                                 if ebay_title == False :
-                                    mail_text += 'タイトル：' + row[3] + "\n"
+                                    mail_text += 'タイトル：' + data['row'][3] + "\n"
                                 
-                                mail_text += 'URL: ' + row[6] + "\n"
+                                mail_text += 'URL: ' + data['row'][6] + "\n"
                                 mail_text += '【フリマ】' + "\n"
                                 mail_text += 'タイトル：' + data['product_name'] + "\n"
-                                mail_text += 'URL: ' + row[5] + "\n"
+                                mail_text += 'URL: ' + data['row'][5] + "\n"
                                 
                                 mail_text += str(price) + '円 → ' + str(purchase_price) + '円' + "\n"
                                 # print("mail",mail_text)
