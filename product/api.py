@@ -17,6 +17,7 @@ from product.scrape.engineselector import select_engine
 from utils.convertcurrency import getCurrentRate
 from users.models import User
 from utils.profit_formula import profit_formula
+from utils.profit_order_formula import profit_order_formula
 
 class ProductViewSet(ModelViewSet):
     serializer_class = ProductSerializer
@@ -125,6 +126,7 @@ class ProductViewSet(ModelViewSet):
         )
     @action(detail=False, methods=['GET'])
     def get_products_filter(self, request):
+        
         creator = request.GET.get('created_by')
         user_id = request.GET.get('user_id')
         condition = request.GET.get('condition')
@@ -356,7 +358,7 @@ class ProductViewSet(ModelViewSet):
             if shipping.isnumeric() == False or shipping == None:
                 shipping = 0
 
-            profit = '%.3f'%(profit_formula(float(sell_price_en), int(purchase_price), float(prima), float(shipping), res))
+            profit = '%.3f'%(profit_order_formula(float(sell_price_en), int(purchase_price), float(prima), float(shipping), res))
             profit_rate = 0
 
             if sell_price_en != 0:
@@ -391,21 +393,45 @@ class ProductViewSet(ModelViewSet):
     @action(detail=False, methods=['GET'])    
     def get_orders(self, request):
         orders = OrderList.objects.select_related('created_by').order_by('-id').values('created_by__username', 'id', 'created_at', 'product_name', 'ec_site', 'purchase_url', 'ebay_url', 'purchase_price', 'sell_price_en', 'profit', 'profit_rate', 'prima', 'shipping', 'order_num', 'notes', 'created_by_id')
-
+        print("test start",orders[0])
         return Response(
             data = orders,
             status = 200
         )
-    
+    @action(detail=False, methods=['GET'])    
+    def get_filter_orders(self, request):
+        # formatted_Date= request.data['formatted_Date']
+        try :
+            formatted_Date = request.GET.get('formatted_Date')
+        
+            # orders = OrderList.objects.select_related('created_by').order_by('-id').values('created_by__username', 'id', 'created_at', 'product_name', 'ec_site', 'purchase_url', 'ebay_url', 'purchase_price', 'sell_price_en', 'profit', 'profit_rate', 'prima', 'shipping', 'order_num', 'notes', 'created_by_id')
+            orders = OrderList.objects.filter(
+                created_at__startswith=formatted_Date
+            ).order_by('-id').values('id', 'created_at', 'product_name', 'ec_site', 'purchase_url', 'ebay_url', 'purchase_price', 'sell_price_en', 'profit', 'profit_rate', 'prima', 'shipping', 'order_num', 'notes', 'created_by_id')
+            # print("test order", orders[0])
+            if orders == None :
+                return Response(
+                    data = 'マッチするデータはありません。！',
+                        status = 401
+                )
+            return Response(
+                data = orders,
+                status = 200
+            )
+        except :
+            return Response(
+                data = 'マッチするデータはありません。！',
+                    status = 401
+            )
     @action(detail=False, methods=['POST'])
     def add_order_item(self, request):
         item = request.data['order']
         mode = request.data['mode']
-
+        date = datetime.datetime.now()
         if mode == 1:
             try:
                 order = OrderList(
-                    created_at = item['created_at'],
+                    created_at = date,
                     product_name = item['product_name'],
                     ec_site = item['ec_site'],
                     purchase_url = item['purchase_url'],
@@ -437,27 +463,48 @@ class ProductViewSet(ModelViewSet):
                 )
         else:
             try:
-                pid = item['id']
-                order = OrderList.objects.filter(id = pid)
+                order_id = item['id']
 
-                order.update(
-                    created_at = item['created_at'],
-                    product_name = item['product_name'],
-                    ec_site = item['ec_site'],
-                    purchase_url = item['purchase_url'],
-                    ebay_url = item['ebay_url'],
-                    purchase_price = item['purchase_price'],
-                    sell_price_en = item['sell_price_en'],
-                    profit = item['profit'],
-                    profit_rate = item['profit_rate'],
-                    prima = item['prima'],
-                    shipping = item['shipping'],
-                    quantity = item['quantity'],
-                    order_num = item['order_num'],
-                    ordered_at = item['ordered_at'],
-                    notes = item['notes']
-                )
 
+                print(order_id)
+
+                order = OrderList.objects.get(pk=order_id)
+
+                print(order.product_name)
+                date_string = str(item['created_at'])[:10]
+                # order.update(
+                #     created_at = item['created_at'],
+                #     product_name = item['product_name'],
+                #     ec_site = item['ec_site'],
+                #     purchase_url = item['purchase_url'],
+                #     ebay_url = item['ebay_url'],
+                #     purchase_price = item['purchase_price'],
+                #     sell_price_en = item['sell_price_en'],
+                #     profit = float(item['profit']),
+                #     profit_rate =float(item['profit_rate']),
+                #     prima = item['prima'],
+                #     shipping = item['shipping'],
+                #     # quantity = item['quantity'],
+                #     order_num = item['order_num'],
+                #     notes = item['notes']
+                # )
+                print('time', item['created_at'])
+                order.created_at =date_string + str(datetime.datetime.now().time())
+                order.product_name = item['product_name']
+                order.ec_site = item['ec_site']
+                order.purchase_url = item['purchase_url']
+                order.ebay_url = item['ebay_url']
+                order.purchase_price = item['purchase_price']
+                order.sell_price_en = item['sell_price_en']
+                order.profit = item['profit']
+                order.profit_rate = item['profit_rate']
+                order.prima = item['prima']
+                order.shipping = item['shipping']
+                order.quantity = 999
+                order.order_num = item['order_num']
+                order.notes = item['notes']
+                order.ordered_at = 'root'
+                order.save()
                 return Response(
                     {'Success!'},
                     status=200
@@ -476,6 +523,19 @@ class ProductViewSet(ModelViewSet):
 
         return Response(
             data = deletes_list,
+            status = 200
+        )
+    @action(detail=False, methods=['GET'])
+    def get_custom_deleted_products(self, request):
+        
+
+        products = []
+
+        
+        products = DeletedList.objects.select_related('created_by').order_by('-id').values('created_by__username', 'id', 'created_at', 'product_name', 'ec_site', 'purchase_url', 'ebay_url', 'purchase_price', 'sell_price_en', 'profit', 'profit_rate', 'prima','deleted_at', 'shipping', 'notes', 'created_by_id')
+        
+        return Response(
+            data = products,
             status = 200
         )
     
@@ -517,7 +577,113 @@ class ProductViewSet(ModelViewSet):
                 data = '削除操作が失敗しました！',
                 status = 401
             )
+    @action(detail=False, methods=['POST'])  
+    def migrate_product(self, request):
+        id = request.data['id']
+        
+        item = Product.objects.filter(id = id)[0]
+        with open(file=str(settings.BASE_DIR / 'utils/settings_attrs.txt'),  mode='r', encoding='utf-8') as f:
+            settings_attrs = f.read()
 
+        res = json.loads(settings_attrs)
+        rate = getCurrentRate('JPY')
+        res['rate'] = str(rate)
+        new_profit = '%.3f'%(profit_order_formula(float(item.sell_price_en), int(item.purchase_price), float(item.prima), float(item.shipping), res))
+        new_profit_rate = 0
+
+        if float(item.sell_price_en) != 0:
+            new_profit_rate = float(new_profit) / (float(item.sell_price_en) * float(rate)) * 100.0
+
+        try:
+            date = datetime.datetime.now()
+            
+
+            order = OrderList(
+                    created_at = date,
+                    updated_at = "",
+                    product_name = item.product_name,
+                    ec_site = item.ec_site,
+                    purchase_url = item.purchase_url,
+                    ebay_url = item.ebay_url,
+                    purchase_price = item.purchase_price,
+                    sell_price_en = item.sell_price_en,
+                    profit = new_profit,
+                    profit_rate = new_profit_rate,
+                    prima = item.prima,
+                    shipping = item.shipping,
+                    quantity = item.quantity,
+                    order_num = '',
+                    created_by = request.user,
+                    ordered_at = '',
+                    notes = item.notes,
+                )
+            
+            order.save()
+            Product.objects.filter(id = id).update(deleted = True)
+            return Response(
+                {'Success!'},
+                status=200
+            )
+            
+        except:
+            return Response(
+                data = 'オーダー商品登録作業が失敗しました！',
+                status = 401
+            )
+    @action(detail=False, methods=['POST'])  
+    def migrate_del_item(self, request):
+        id = request.data['id']
+        
+        item = DeletedList.objects.filter(id = id)[0]
+        # print(request.user,'del mig', item.product_name, item.ec_site, item.purchase_url, item.ebay_url, item.purchase_price, item.sell_price_en, 
+        # item.profit, item.profit_rate, item.prima, item.shipping, item.notes)
+        try:
+            date = datetime.datetime.now()
+            
+            with open(file=str(settings.BASE_DIR / 'utils/settings_attrs.txt'),  mode='r', encoding='utf-8') as f:
+                settings_attrs = f.read()
+
+            res = json.loads(settings_attrs)
+            rate = getCurrentRate('JPY')
+            res['rate'] = str(rate)
+            new_profit = '%.3f'%(profit_order_formula(float(item.sell_price_en), int(item.purchase_price), float(item.prima), float(item.shipping), res))
+            new_profit_rate = 0
+
+            if float(item.sell_price_en) != 0:
+                new_profit_rate = float(new_profit) / (float(item.sell_price_en) * float(rate)) * 100.0
+            order = OrderList(
+                    created_at = date,
+                    updated_at = "",
+                    product_name = item.product_name,
+                    ec_site = item.ec_site,
+                    purchase_url = item.purchase_url,
+                    ebay_url = item.ebay_url,
+                    purchase_price = item.purchase_price,
+                    sell_price_en = item.sell_price_en,
+                    profit = new_profit,
+                    profit_rate = new_profit_rate,
+                    prima = item.prima,
+                    shipping = item.shipping,
+                    quantity = 0,
+                    order_num = '',
+                    created_by = request.user,
+                    ordered_at = '',
+                    notes = item.notes,
+                )
+            
+            order.save()
+            # DeletedList.objects.get(id = pid).delete()
+            # Product.objects.filter(id = id).update(deleted = True)
+            return Response(
+                data = 'オーダー商品登録作業が成功しました！',
+                status=200
+            )
+            
+        except:
+            return Response(
+                data = 'オーダー商品登録作業が失敗しました！',
+                status = 401
+            )
     @action(detail=False, methods=['POST'])
     def delete_order_item(self, request):
         pid = request.data['id']
@@ -575,6 +741,7 @@ class ProductViewSet(ModelViewSet):
     
     @action(detail=False, methods=['GET'])
     def get_ecsites(self, request):
+        print("test ec")
         with open(file=str(settings.BASE_DIR / 'utils/scrape_site.txt'),  mode='r', encoding='utf-8') as f:
             ecsites = f.read()
         

@@ -18,7 +18,7 @@ class ScrapingEngine:
 
         
         res = json.loads(settings_attrs)
-    
+        
         options = webdriver.ChromeOptions() 
         options.headless = True
 
@@ -43,33 +43,42 @@ class ScrapingEngine:
             #     driver.get(source_url)
             # print('2',loaded)   
             # time.sleep(1)
-        try:
-            price_dom = dom.find('div', attrs={'data-testid': 'price'}) or dom.find('div', attrs={'data-testid': 'product-price'})
-            data['purchase_price'] = int(price_dom.find_all('span')[-1].text.replace(',', ''))
-            # data['purchase_price'] = int(driver.find_element(By.XPATH, "//*[@id='item-info']/section[1]/section[1]/div/div/span[2]").text.replace(',', '')) 
-            data['product_name'] = driver.find_element(By.XPATH, "//*[@id='item-info']/section[1]/div[1]/div/div/h1").text
-            # title_dom = dom.find('div', attrs={'data-testid': 'name'}) or dom.find('div', attrs={'data-testid': 'display-name'})
-            # data['product_name'] = convert_text(title_dom.div.h1.text)
+        if (dom.find('div', attrs={'class', 'merEmptyState'})) :
+            print("delete empty", source_url)
+            try :
+                if (dom.find('div', attrs={'data-testid': 'price'})) == None :
+                    content=driver.find_element(By.XPATH, "//*[@id='main']/div/div[1]/p").text
+                    if content == 'この商品は削除されました' or content != None :
+                        print("delete source", source_url)
+                        data['nothing'] = True
+                        driver.close()
+                        return data
+            except :
+
+                print('del continue',source_url)
             
-            product_date = driver.find_element(By.XPATH, "//*[@id='item-info']/section[2]/p").text
+        price_dom = dom.find('div', attrs={'data-testid': 'price'}) or dom.find('div', attrs={'data-testid': 'product-price'})
+        data['purchase_price'] = int(price_dom.find_all('span')[-1].text.replace(',', ''))
+        # data['purchase_price'] = int(driver.find_element(By.XPATH, "//*[@id='item-info']/section[1]/section[1]/div/div/span[2]").text.replace(',', '')) 
+        data['product_name'] = driver.find_element(By.XPATH, "//*[@id='item-info']/section[1]/div[1]/div/div/h1").text
+        # title_dom = dom.find('div', attrs={'data-testid': 'name'}) or dom.find('div', attrs={'data-testid': 'display-name'})
+        # data['product_name'] = convert_text(title_dom.div.h1.text)
+        
+        product_date = driver.find_element(By.XPATH, "//*[@id='item-info']/section[2]/p").text
 
-            data['nothing'] = False
+        data['nothing'] = False
 
-            index = MERCARI.get(res['mercari'])
-            cindex = MERCARI.get(product_date)
-            # print("index",cindex)
-            if cindex != None and index <= cindex:
-                # print("test date")
-                data['nothing'] = True
+        index = MERCARI.get(res['mercari'])
+        cindex = MERCARI.get(product_date)
+        
+        if cindex != None and index <= cindex:
+            print(source_url,"delete index",cindex)
+            data['nothing'] = True
 
-            button = driver.find_elements(By.CLASS_NAME, "merButton")[-1].find_elements(By.TAG_NAME, "button")[0].text
+        button = driver.find_elements(By.CLASS_NAME, "merButton")[-1].find_elements(By.TAG_NAME, "button")[0].text
 
-            if button == '売り切れました':
-                # print('sold')
-                data['nothing'] = True
-
-        except:
-            # print("test error dele")
+        if button == '売り切れました':
+            print('delete sold', source_url)
             data['nothing'] = True
 
         driver.close()
