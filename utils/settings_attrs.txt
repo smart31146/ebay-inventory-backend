@@ -6,7 +6,7 @@
     "oversea": "1.35",
     "payoneer": "2",
     "fedex": "20",
-    "rate": "151.45",
+    "rate": "150.99",
     "mercari": "5\u304b\u6708\u524d",
     "paypay": "5\u30f6\u6708\u524d\u306b\u66f4\u65b0"
 }

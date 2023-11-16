@@ -2,6 +2,6 @@
 "mercari": "メルカリ",
 "auctions": "ヤフオク",
 "fril": "ラクマ",
-"paypay": "Paypayフリマ",
+"paypay": "Yahooフリマ",
 "other": "その他"
 }
