@@ -142,10 +142,10 @@ def main():
      
     while True:
 
-        # cur_time = datetime.datetime.now().hour
-        # print(cur_time,"time", int(cur_time))
-        # if int(cur_time)>=22 or int(cur_time) < 1 :
-        #     continue
+        cur_time = datetime.datetime.now().hour
+        print(cur_time,"time", int(cur_time))
+        if int(cur_time)>=22 or int(cur_time) < 1 :
+            continue
         time.sleep(10)
         with open(file=str(settings.BASE_DIR / 'utils/settings_attrs.txt'),  mode='r', encoding='utf-8') as f:
             settings_attrs = f.read()
@@ -204,10 +204,10 @@ def main():
             with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
                 futures = []
                 for row in rows:
-                    # re_time = datetime.datetime.now().hour
-                    # print(re_time,"time", int(re_time))
-                    # if int(re_time)>=22 or int(re_time) < 1 :
-                    #     break
+                    re_time = datetime.datetime.now().hour
+                    print(re_time,"time", int(re_time))
+                    if int(re_time)>=22 or int(re_time) < 1 :
+                        continue
                     # try:
                     pid = str(row[0])
                     url = row[5]
@@ -218,7 +218,7 @@ def main():
                         continue
 
                     
-                    # if pid != '2041' or pid != '1984':
+                    # if pid != '1682':
                     #     continue
                     # # if pan_id > int(pid) :
                     #     continue
@@ -246,9 +246,9 @@ def main():
                 
                 for future in concurrent.futures.as_completed(futures):
                     re1_time = datetime.datetime.now().hour
-                    # print(re_time,"time", int(re_time))
-                    # if int(re1_time)>=22 or int(re1_time) < 1 :
-                    #     break
+                    print(re_time,"time", int(re_time))
+                    if int(re1_time)>=22 or int(re1_time) < 1 :
+                        continue
                     try:
                         pp+=1
                         data = {}
