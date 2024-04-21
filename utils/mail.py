@@ -14,6 +14,6 @@ def send_mail(FROM, PSW, TO, title, text):
 
     text_part = MIMEText(text, "plain")
     msg.attach(text_part)
-    
+
     server.sendmail(FROM, TO, msg.as_string())
     server.quit()

@@ -119,14 +119,13 @@ class ProductViewSet(ModelViewSet):
                 products = Product.objects.filter(deleted = False).select_related('created_by').order_by('-id').values('created_by__username', 'id', 'created_at', 'product_name', 'ec_site', 'purchase_url', 'ebay_url', 'purchase_price', 'sell_price_en', 'profit', 'profit_rate', 'prima', 'shipping', 'notes', 'created_by_id')
         else:
             products = Product.objects.filter(created_by = creator, deleted = False).select_related('created_by').order_by('-id').values('created_by__username', 'id', 'created_at', 'product_name', 'ec_site', 'purchase_url', 'ebay_url', 'purchase_price', 'sell_price_en', 'profit', 'profit_rate', 'prima', 'shipping', 'notes', 'created_by_id')
-
+        
         return Response(
             data = products,
             status = 200
         )
     @action(detail=False, methods=['GET'])
     def get_products_filter(self, request):
-        
         creator = request.GET.get('created_by')
         user_id = request.GET.get('user_id')
         condition = request.GET.get('condition')
@@ -392,7 +391,7 @@ class ProductViewSet(ModelViewSet):
         
     @action(detail=False, methods=['GET'])    
     def get_orders(self, request):
-        orders = OrderList.objects.select_related('created_by').order_by('-id').values('created_by__username', 'id', 'created_at', 'product_name', 'ec_site', 'purchase_url', 'ebay_url', 'purchase_price', 'sell_price_en', 'profit', 'profit_rate', 'prima', 'shipping', 'order_num', 'notes', 'created_by_id')
+        orders = OrderList.objects.select_related('created_by').order_by('-id').values('created_by__username', 'id', 'created_at', 'product_name', 'ec_site', 'purchase_url', 'ebay_url', 'purchase_price', 'sell_price_en', 'profit', 'profit_rate', 'prima', 'shipping', 'order_num','ordered_at', 'notes', 'created_by_id')
         print("test start",orders[0])
         return Response(
             data = orders,
@@ -444,7 +443,7 @@ class ProductViewSet(ModelViewSet):
                     shipping = item['shipping'],
                     quantity = item['quantity'],
                     order_num = item['order_num'],
-                    ordered_at = item['ordered_at'],
+                    ordered_at = request.user,
                     created_by = request.user,
                     notes = item['notes']
                 )
@@ -503,7 +502,7 @@ class ProductViewSet(ModelViewSet):
                 order.quantity = 999
                 order.order_num = item['order_num']
                 order.notes = item['notes']
-                order.ordered_at = 'root'
+                order.ordered_at = item['ordered_at']
                 order.save()
                 return Response(
                     {'Success!'},
@@ -580,6 +579,7 @@ class ProductViewSet(ModelViewSet):
     @action(detail=False, methods=['POST'])  
     def migrate_product(self, request):
         id = request.data['id']
+        user= request.data['user']
         
         item = Product.objects.filter(id = id)[0]
         with open(file=str(settings.BASE_DIR / 'utils/settings_attrs.txt'),  mode='r', encoding='utf-8') as f:
@@ -614,7 +614,7 @@ class ProductViewSet(ModelViewSet):
                     quantity = item.quantity,
                     order_num = '',
                     created_by = request.user,
-                    ordered_at = '',
+                    ordered_at = user,
                     notes = item.notes,
                 )
             
@@ -633,7 +633,7 @@ class ProductViewSet(ModelViewSet):
     @action(detail=False, methods=['POST'])  
     def migrate_del_item(self, request):
         id = request.data['id']
-        
+        user = request.data['user']
         item = DeletedList.objects.filter(id = id)[0]
         # print(request.user,'del mig', item.product_name, item.ec_site, item.purchase_url, item.ebay_url, item.purchase_price, item.sell_price_en, 
         # item.profit, item.profit_rate, item.prima, item.shipping, item.notes)
@@ -667,7 +667,7 @@ class ProductViewSet(ModelViewSet):
                     quantity = 0,
                     order_num = '',
                     created_by = request.user,
-                    ordered_at = '',
+                    ordered_at = user,
                     notes = item.notes,
                 )
             

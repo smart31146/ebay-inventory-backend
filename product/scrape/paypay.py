@@ -27,12 +27,12 @@ class ScrapingEngine:
         data = {}
 
         try:
-            price = dom.find('span', attrs={'class': 'sc-f27eb67d-0 euzCBb ItemPrice__Component'}).text.replace(',', '')
+            price = dom.find('span', attrs={'class': 'sc-16898e71-0 jQeuFi ItemPrice__Component'}).text.replace(',', '')
             data['purchase_price'] = price.replace('円', '')
-            data['product_name'] = dom.find('span', attrs={'class': 'sc-5ea3dbc3-0 bdURdq'}).text
+            data['product_name'] = dom.find('span', attrs={'class': 'sc-b9519356-0 lkCzRl'}).text
             data['nothing'] = False
 
-            date = dom.find('span', attrs={'class': 'sc-5ea3dbc3-0 dguVSe'}).text
+            date = dom.find('span', attrs={'class': 'sc-b9519356-0 kFtkcq'}).text
             
             index = PAYPAY.get(res['paypay'])
             cindex = PAYPAY.get(date)
@@ -43,5 +43,6 @@ class ScrapingEngine:
         except:
             data['nothing'] = True
 
+        driver.close()
             
         return data

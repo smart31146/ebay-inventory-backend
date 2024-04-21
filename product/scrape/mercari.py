@@ -93,9 +93,9 @@ class ScrapingEngine:
         
                    
         # price_dom = dom.find('div', attrs={'data-testid': 'price'}) or dom.find('div', attrs={'data-testid': 'product-price'})
-        # price = int(driver.find_element(By.CSS_SELECTOR,"div[data-testid='price']").find_elements(By.TAG_NAME,"span")[1].text.replace(',', ''))
+        price = int(driver.find_element(By.CSS_SELECTOR,"div[data-testid='price']").find_elements(By.TAG_NAME,"span")[1].text.replace(',', ''))
         # price=int(driver.find_element(By.ID,"item-info").find_elements(By.TAG_NAME,"span")[-1].text.replace(',', ''))
-        # print("test price", price)
+        print("test price", price)
         # data['purchase_price'] = int(price_dom.find_all('span')[-1].text.replace(',', ''))
         data['purchase_price'] = int(driver.find_element(By.CSS_SELECTOR,"div[data-testid='price']").find_elements(By.TAG_NAME,"span")[1].text.replace(',', ''))
         data['product_name'] = driver.find_element(By.XPATH, "//*[@id='item-info']/section[1]/div[1]/div/div/h1").text
