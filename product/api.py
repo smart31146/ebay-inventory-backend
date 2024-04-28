@@ -2,14 +2,17 @@ import csv
 import json
 import datetime
 import openpyxl
-
+import environ
+import os
 from django.conf import settings
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from dry_rest_permissions.generics import DRYPermissions
-
+from pathlib import Path
 from ebaysdk.trading import Connection
+from ebaysdk.shopping import Connection as Shopping
+import psycopg2
 from django.db.models import Q
 from .models import Product, DeletedList, OrderList
 from .serializers import ProductSerializer
@@ -684,6 +687,106 @@ class ProductViewSet(ModelViewSet):
                 data = 'オーダー商品登録作業が失敗しました！',
                 status = 401
             )
+        
+    @action(detail=False, methods=['POST'])  
+    def recover_del_item(self, request):
+        id = request.data['id']
+        item = DeletedList.objects.filter(id = id)[0]
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'productmanage.settings')
+  
+        env = environ.Env()
+        BASE_DIR = Path(__file__).resolve().parent
+        env.read_env(str(BASE_DIR / ".env"))
+        conn = psycopg2.connect(
+                database = env('DB_NAME'),
+                host = env('DB_HOST'),
+                user = env('DB_USER'),
+                password = env('DB_PASSWORD'),
+                port = env('DB_PORT')
+            )
+            
+        sql = "SELECT email, app_id, cert_id, dev_id, ebay_token FROM users_user WHERE is_superuser = TRUE"
+
+        cur = conn.cursor()
+        cur.execute(sql)
+        row = cur.fetchone()
+
+        if row == None:
+            return Response(
+                data = '商品再登録が失敗しました！',
+                status = 401
+            )
+
+        
+        ebay_setting = {
+            'app_id' : row[1],
+            'cert_id' : row[2],
+            'dev_id' : row[3],
+            'ebay_token' : row[4]
+        }
+        
+        
+        
+        # print(request.user,'del mig', item.product_name, item.ec_site, item.purchase_url, item.ebay_url, item.purchase_price, item.sell_price_en, 
+        # item.profit, item.profit_rate, item.prima, item.shipping, item.notes)
+        
+        try:
+            
+            
+            if item.ebay_url == '':
+                return Response(
+                    data = '商品再登録が失敗しました！',
+                    status = 401
+                )
+            Product.objects.filter(ebay_url = item.ebay_url).update(deleted = False)
+            DeletedList.objects.get(id = id).delete()
+            if ebay_setting['app_id'] == "" or ebay_setting['cert_id'] == "" or ebay_setting['dev_id'] == "" or ebay_setting['ebay_token'] == "":
+                return Response(
+                    data = '商品再登録が失敗しました！',
+                    status = 401
+                )
+            
+            item_number = item.ebay_url.split("/")[-1]
+
+            try:
+                api = Connection(appid = ebay_setting['app_id'], devid = ebay_setting['dev_id'], certid = ebay_setting['cert_id'], token = ebay_setting['ebay_token'], config_file=None)
+                item_ebay = {
+                    'Item': {
+                        'ItemID': item_number.strip(),
+                        'Quantity': 1
+                    }
+                }
+
+                try:
+                    api.execute('ReviseItem', item_ebay)
+                    
+                    
+                    return Response(
+                        data = '商品再登録が成功しました！',
+                        status=200
+                    )
+                
+                except:
+                    print("api revise error")
+                    return Response(
+                        data = '商品再登録が失敗しました！',
+                        status = 401
+                    )
+            
+            except:
+                print("api error")
+                return Response(
+                    data = '商品再登録が失敗しました！',
+                    status = 401
+                )
+            
+            
+        except:
+            return Response(
+                data = '商品再登録が失敗しました！',
+                status = 401
+            )
+        
     @action(detail=False, methods=['POST'])
     def delete_order_item(self, request):
         pid = request.data['id']

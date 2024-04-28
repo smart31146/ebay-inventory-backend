@@ -143,7 +143,7 @@ def main():
     while True:
 
         cur_time = datetime.datetime.now().hour
-        print(cur_time,"time", int(cur_time))
+        # print(cur_time,"time", int(cur_time))
         if int(cur_time)>=22 or int(cur_time) < 1 :
             continue
         time.sleep(10)
@@ -205,7 +205,7 @@ def main():
                 futures = []
                 for row in rows:
                     re_time = datetime.datetime.now().hour
-                    print(re_time,"time", int(re_time))
+                    # print(re_time,"time", int(re_time))
                     if int(re_time)>=22 or int(re_time) < 1 :
                         continue
                     # try:
@@ -218,7 +218,7 @@ def main():
                         continue
 
                     
-                    # if pid != '1682':
+                    # if pid != '66':
                     #     continue
                     # # if pan_id > int(pid) :
                     #     continue
@@ -246,7 +246,7 @@ def main():
                 
                 for future in concurrent.futures.as_completed(futures):
                     re1_time = datetime.datetime.now().hour
-                    print(re_time,"time", int(re_time))
+                    # print(re_time,"time", int(re_time))
                     if int(re1_time)>=22 or int(re1_time) < 1 :
                         continue
                     try:
