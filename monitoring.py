@@ -35,6 +35,7 @@ def config():
 def scrape_data(url,row):
     
     engine = select_engine(url=url)
+    # print(engine,"test scrap", url)
     if engine:
         engine = engine()
         flag=1
@@ -46,7 +47,7 @@ def scrape_data(url,row):
                 return data
             except Exception as err:
                 flag=1              
-                # print("scrap erro", url)
+                print("scrap erro", url)
             # raise err
         
         return data
@@ -201,7 +202,7 @@ def main():
             rows = cur.fetchall()
             title = "商品の価格変動！\n"
             mail_text = ''
-            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
                 futures = []
                 for row in rows:
                     re_time = datetime.datetime.now().hour
@@ -218,10 +219,10 @@ def main():
                         continue
 
                     
-                    # if pid != '66':
+                    # if int(pid) != 23227:
                     #     continue
-                    # # if pan_id > int(pid) :
-                    #     continue
+                    # if pan_id > int(pid) :
+                        # continue
                     print(pid, "pan", pan_id)
                     
                     pan_id = int(pid)

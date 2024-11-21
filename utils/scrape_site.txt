@@ -3,5 +3,7 @@
 "auctions": "ヤフオク",
 "fril": "ラクマ",
 "paypay": "Yahooフリマ",
+"hardoff": "オフモール",
+"rakuten": "楽天",
 "other": "その他"
 }

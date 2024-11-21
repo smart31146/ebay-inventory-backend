@@ -20,6 +20,7 @@ from product.scrape.engineselector import select_engine
 from utils.convertcurrency import getCurrentRate
 from users.models import User
 from utils.profit_formula import profit_formula
+from utils.sell_set_formula import sell_set_formula
 from utils.profit_order_formula import profit_order_formula
 
 class ProductViewSet(ModelViewSet):
@@ -265,6 +266,7 @@ class ProductViewSet(ModelViewSet):
 
         res = json.loads(settings_attrs)
         rate = getCurrentRate('JPY')
+        print("test rate", rate)
         res['rate'] = float(rate)
 
         for i in range(1, wproductsInfo.max_row):
@@ -334,6 +336,7 @@ class ProductViewSet(ModelViewSet):
 
         res = json.loads(settings_attrs)
         rate = getCurrentRate('JPY')
+        print("test rate", rate)
         res['rate'] = str(rate)
 
         for i in range(1, wproductsInfo.max_row):
@@ -583,13 +586,17 @@ class ProductViewSet(ModelViewSet):
     def migrate_product(self, request):
         id = request.data['id']
         user= request.data['user']
-        
+        if user is None:
+                user = User.objects.get_or_create(username='root')[0]  # Get or create user with username 'root'
+        else:
+            user = User.objects.get(username=user)
         item = Product.objects.filter(id = id)[0]
         with open(file=str(settings.BASE_DIR / 'utils/settings_attrs.txt'),  mode='r', encoding='utf-8') as f:
             settings_attrs = f.read()
 
         res = json.loads(settings_attrs)
         rate = getCurrentRate('JPY')
+        print("test rate", rate)
         res['rate'] = str(rate)
         new_profit = '%.3f'%(profit_order_formula(float(item.sell_price_en), int(item.purchase_price), float(item.prima), float(item.shipping), res))
         new_profit_rate = 0
@@ -616,8 +623,8 @@ class ProductViewSet(ModelViewSet):
                     shipping = item.shipping,
                     quantity = item.quantity,
                     order_num = '',
-                    created_by = request.user,
-                    ordered_at = user,
+                    created_by=user,
+                    ordered_at=user.username,
                     notes = item.notes,
                 )
             
@@ -635,59 +642,73 @@ class ProductViewSet(ModelViewSet):
             )
     @action(detail=False, methods=['POST'])  
     def migrate_del_item(self, request):
-        id = request.data['id']
-        user = request.data['user']
-        item = DeletedList.objects.filter(id = id)[0]
-        # print(request.user,'del mig', item.product_name, item.ec_site, item.purchase_url, item.ebay_url, item.purchase_price, item.sell_price_en, 
-        # item.profit, item.profit_rate, item.prima, item.shipping, item.notes)
         try:
+           
+            id = request.data['id']
+                       
+            # Handling the case where user is None
+            user = request.data['user']
+            if user is None:
+                user = User.objects.get_or_create(username='root')[0]  # Get or create user with username 'root'
+            else:
+                user = User.objects.get(username=user)
+                
+           
+
+            item = DeletedList.objects.filter(id=id).first()
+            if not item:
+                return Response(data='アイテムが見つかりません', status=404)
+
             date = datetime.datetime.now()
-            
-            with open(file=str(settings.BASE_DIR / 'utils/settings_attrs.txt'),  mode='r', encoding='utf-8') as f:
+
+            with open(file=str(settings.BASE_DIR / 'utils/settings_attrs.txt'), mode='r', encoding='utf-8') as f:
                 settings_attrs = f.read()
 
             res = json.loads(settings_attrs)
             rate = getCurrentRate('JPY')
+            print("test rate", rate)
             res['rate'] = str(rate)
-            new_profit = '%.3f'%(profit_order_formula(float(item.sell_price_en), int(item.purchase_price), float(item.prima), float(item.shipping), res))
+            new_profit = '%.3f' % (profit_order_formula(float(item.sell_price_en), int(item.purchase_price), float(item.prima), float(item.shipping), res))
             new_profit_rate = 0
 
             if float(item.sell_price_en) != 0:
                 new_profit_rate = float(new_profit) / (float(item.sell_price_en) * float(rate)) * 100.0
+
             order = OrderList(
-                    created_at = date,
-                    updated_at = "",
-                    product_name = item.product_name,
-                    ec_site = item.ec_site,
-                    purchase_url = item.purchase_url,
-                    ebay_url = item.ebay_url,
-                    purchase_price = item.purchase_price,
-                    sell_price_en = item.sell_price_en,
-                    profit = new_profit,
-                    profit_rate = new_profit_rate,
-                    prima = item.prima,
-                    shipping = item.shipping,
-                    quantity = 0,
-                    order_num = '',
-                    created_by = request.user,
-                    ordered_at = user,
-                    notes = item.notes,
-                )
-            
+                created_at=date,
+                updated_at="",
+                product_name=item.product_name,
+                ec_site=item.ec_site,
+                purchase_url=item.purchase_url,
+                ebay_url=item.ebay_url,
+                purchase_price=item.purchase_price,
+                sell_price_en=item.sell_price_en,
+                profit=new_profit,
+                profit_rate=new_profit_rate,
+                prima=item.prima,
+                shipping=item.shipping,
+                quantity=0,
+                order_num='',
+                created_by=user,
+                ordered_at=user.username,  # Assuming ordered_at should be a string representing the user's username
+                notes=item.notes,
+            )
+
             order.save()
-            # DeletedList.objects.get(id = pid).delete()
-            # Product.objects.filter(id = id).update(deleted = True)
+            
+            # DeletedList.objects.get(id=item.id).delete()
+            # Product.objects.filter(id=id).update(deleted=True)
             return Response(
-                data = 'オーダー商品登録作業が成功しました！',
+                data='オーダー商品登録作業が成功しました！',
                 status=200
             )
-            
-        except:
+
+        except Exception as e:
+            print(f"Exception occurred: {e}")
             return Response(
-                data = 'オーダー商品登録作業が失敗しました！',
-                status = 401
+                data=f'オーダー商品登録作業が失敗しました: {str(e)}',
+                status=401
             )
-        
     @action(detail=False, methods=['POST'])  
     def recover_del_item(self, request):
         id = request.data['id']
@@ -787,6 +808,133 @@ class ProductViewSet(ModelViewSet):
                 status = 401
             )
         
+    @action(detail=False, methods=['POST'])  
+    def set_ebay_price(self, request):
+        price = 0.00
+        profitSellRate = request.data['profitSellRate']
+        # item_url = request.data['ebay_url']
+        # item = DeletedList.objects.filter(id = id)[0]
+        with open(file=str(settings.BASE_DIR / 'utils/settings_attrs.txt'),  mode='r', encoding='utf-8') as f:
+            settings_attrs = f.read()
+
+        res = json.loads(settings_attrs)
+        rate = getCurrentRate('JPY')
+        res['rate'] = str(rate)
+
+        with open(file=str(settings.BASE_DIR / 'utils/settings_attrs.txt'),  mode='w', encoding='utf-8') as f:
+            f.write(json.dumps(res, indent=4))
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'productmanage.settings')
+  
+        env = environ.Env()
+        BASE_DIR = Path(__file__).resolve().parent
+        env.read_env(str(BASE_DIR / ".env"))
+        conn = psycopg2.connect(
+                database = env('DB_NAME'),
+                host = env('DB_HOST'),
+                user = env('DB_USER'),
+                password = env('DB_PASSWORD'),
+                port = env('DB_PORT')
+            )
+            
+        sql = "SELECT email, app_id, cert_id, dev_id, ebay_token FROM users_user WHERE is_superuser = TRUE"
+
+        cur = conn.cursor()
+        cur.execute(sql)
+        row = cur.fetchone()
+
+        if row == None:
+            return Response(
+                data = '商品再登録が失敗しました！',
+                status = 401
+            )
+
+        
+        ebay_setting = {
+            'app_id' : row[1],
+            'cert_id' : row[2],
+            'dev_id' : row[3],
+            'ebay_token' : row[4]
+        }
+        
+        try:
+            # update profits
+            products = Product.objects.all().order_by('-id')
+            ct=0
+            for product in products:
+                # sell_price = float(product.sell_price_en)
+                if product.deleted == False:
+                    purchase_price = product.purchase_price
+                    prima = product.prima
+                    shipping = product.shipping
+
+                    price = float(sell_set_formula(float(profitSellRate), int(purchase_price), float(prima), float(shipping), res))
+                    # print("test price1", price, rate, profitSellRate,  item_url, product.ebay_url)
+                    profit = float(price)*float(rate)*float(profitSellRate)/100
+                    # print("test price2", price, profit, item_url, product.ebay_url)
+                    # profit_rate = (profit / (sell_price * rate)) * 100
+                    
+                    if ebay_setting['app_id'] == "" or ebay_setting['cert_id'] == "" or ebay_setting['dev_id'] == "" or ebay_setting['ebay_token'] == "":
+                        return Response(
+                            data = '商品再登録が失敗しました！',
+                            status = 401
+                        )
+                    
+                    item_number = product.ebay_url.split("/")[-1]
+                    # print("test item", item_number," ", price)
+                    try:
+                        api = Connection(appid = ebay_setting['app_id'], devid = ebay_setting['dev_id'], certid = ebay_setting['cert_id'], token = ebay_setting['ebay_token'], config_file=None)
+                        item_ebay = {
+                            'Item': {
+                                'ItemID': item_number.strip(),
+                                'StartPrice': price
+                            }
+                        }
+                        # print("test item", item_number," ", price, profit, profitSellRate)
+                        
+                        try:
+                            api.execute('ReviseItem', item_ebay)
+                            
+                            Product.objects.filter(id = product.id).update(profit = profit, profit_rate = profitSellRate, sell_price_en = price)
+                            
+                            ct+=1
+                            if ct>100 :
+                                ct=0
+                                print("test ct", ct)
+                                for x in range(500000000):
+                                    if x == 49999999:
+                                        
+                                        print("test x")
+                        except:
+                            print(product.purchase_url, "api revise error 1",product.ebay_url)
+                            print("test ct error", ct)
+                            
+                                # return Response(
+                                #     data = '商品再登録が失敗しました！',
+                                #     status = 401
+                                # )
+                        
+                        
+                    except:
+                        print("api error 2")
+                        return Response(
+                            data = '商品再登録が失敗しました！',
+                            status = 401
+                        )
+                    
+
+            return Response(
+                data = '商品再登録が成功しました！',
+                status=200
+            )   
+        except:
+            print("api error 3")
+            return Response(
+                data = "商品再登録が失敗しました！",
+                status = 401
+            )
+        
+        
+        
     @action(detail=False, methods=['POST'])
     def delete_order_item(self, request):
         pid = request.data['id']
@@ -818,7 +966,7 @@ class ProductViewSet(ModelViewSet):
 
         res = json.loads(settings_attrs)
         rate = getCurrentRate('JPY')
-
+        print("test rate", rate)
         
         res['rate'] = str(rate)
 
@@ -900,6 +1048,7 @@ class ProductViewSet(ModelViewSet):
 
         res = json.loads(settings_attrs)
         rate = getCurrentRate('JPY')
+        print("test rate", rate)
         res['rate'] = str(rate)
 
         with open(file=str(settings.BASE_DIR / 'utils/settings_attrs.txt'),  mode='w', encoding='utf-8') as f:
