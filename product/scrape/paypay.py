@@ -16,9 +16,16 @@ class ScrapingEngine:
 
         res = json.loads(settings_attrs)
 
+        
+        # options.headless = True
         options = webdriver.ChromeOptions() 
-        options.headless = True
-        driver = webdriver.Chrome(options = options, service = ChromeService(ChromeDriverManager().install()))
+        options.add_argument("--headless=new")
+        options.add_argument('ignoreHTTPSErrors')
+
+        # try:
+        driver = webdriver.Chrome(service = ChromeService(ChromeDriverManager().install()), options = options)
+        
+        driver.set_window_size(2560, 1440)
         
         driver.get(source_url)
 
@@ -27,20 +34,26 @@ class ScrapingEngine:
         data = {}
 
         try:
-            price = dom.find('span', attrs={'class': 'sc-16898e71-0 jQeuFi ItemPrice__Component'}).text.replace(',', '')
-            data['purchase_price'] = price.replace('円', '')
-            data['product_name'] = dom.find('span', attrs={'class': 'sc-b9519356-0 lkCzRl'}).text
+            data['purchase_price'] = dom.find('span', attrs={'class': 'sc-ac2d9669-0 fsBeCG'}).text.replace(',', '')
+            # data['purchase_price'] = price.replace('円', '')
+            data['product_name'] = dom.find('span', attrs={'class': 'sc-ac2d9669-0 deiJjo'}).text
             data['nothing'] = False
 
-            date = dom.find('span', attrs={'class': 'sc-b9519356-0 kFtkcq'}).text
+
+            date = dom.find('span', attrs={'class': 'sc-ac2d9669-0 iA-dHEv'}).text
             
             index = PAYPAY.get(res['paypay'])
             cindex = PAYPAY.get(date)
 
             if cindex != None and cindex >= index:
                 data['nothing'] = True
-
+            pan = dom.find('div', attrs={'class': 'sc-a9056ee8-5 cIZEtZ'}).text
+            if pan != "購入手続きへ":
+                data['nothing'] = True
+                print("sold")
+            print("correct", data)
         except:
+            print("none exist")
             data['nothing'] = True
 
         driver.close()

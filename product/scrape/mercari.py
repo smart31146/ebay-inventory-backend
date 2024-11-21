@@ -5,6 +5,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
 from django.conf import settings
 
 from utils.outdate import MERCARI
@@ -25,6 +26,7 @@ class ScrapingEngine:
 
         # try:
         driver = webdriver.Chrome(service = ChromeService(ChromeDriverManager().install()), options = options)
+        
         driver.set_window_size(2560, 1440)
         # except:
         #     print('driver error')
@@ -80,41 +82,48 @@ class ScrapingEngine:
         #     except :
 
         #         print('del continue',source_url)
-        print("test", source_url)           
+                
         # pan=driver.find_element(By.XPATH, "//*[@id='main']/article/div[1]/section/div/div/div/div/div[2]/div/div[1]/div[2]/div/div[1]/div/div/div/div").get_attribute("aria-label")
-        pan_items = driver.find_elements(By.CLASS_NAME, "merItemThumbnail")
-        for item in pan_items :
+        try:
+            pan_items = driver.find_elements(By.CLASS_NAME, "merItemThumbnail")
+            for item in pan_items :
+                
+                if item.get_attribute("aria-label") == '売り切れ':
+                    print('delete sold', source_url)
+                    data['nothing'] = True
+                    driver.close()
+                    return data
+                # print(source_url,"okay",item.get_attribute("aria-label"))
             
-            if item.get_attribute("aria-label") == '売り切れ':
-                print('delete sold', source_url)
+                    
+            # price_dom = dom.find('div', attrs={'data-testid': 'price'}) or dom.find('div', attrs={'data-testid': 'product-price'})
+            price = int(driver.find_element(By.CSS_SELECTOR,"div[data-testid='price']").find_elements(By.TAG_NAME,"span")[1].text.replace(',', ''))
+            # price=int(driver.find_element(By.ID,"item-info").find_elements(By.TAG_NAME,"span")[-1].text.replace(',', ''))
+            print("test price", price)
+            # data['purchase_price'] = int(price_dom.find_all('span')[-1].text.replace(',', ''))
+            data['purchase_price'] = int(driver.find_element(By.CSS_SELECTOR,"div[data-testid='price']").find_elements(By.TAG_NAME,"span")[1].text.replace(',', ''))
+            data['product_name'] = driver.find_element(By.XPATH, "//*[@id='item-info']/section[1]/div[1]/div/div/h1").text
+            # title_dom = dom.find('div', attrs={'data-testid': 'name'}) or dom.find('div', attrs={'data-testid': 'display-name'})
+            # data['product_name'] = convert_text(title_dom.div.h1.text)
+            
+            product_date = driver.find_element(By.XPATH, "//*[@id='item-info']/section[2]/p").text
+
+            data['nothing'] = False
+
+            index = MERCARI.get(res['mercari'])
+            cindex = MERCARI.get(product_date)
+            
+            if cindex != None and index <= cindex:
+                print(source_url,"delete index",cindex)
                 data['nothing'] = True
-                return data
-            # print(source_url,"okay",item.get_attribute("aria-label"))
-        
-                   
-        # price_dom = dom.find('div', attrs={'data-testid': 'price'}) or dom.find('div', attrs={'data-testid': 'product-price'})
-        price = int(driver.find_element(By.CSS_SELECTOR,"div[data-testid='price']").find_elements(By.TAG_NAME,"span")[1].text.replace(',', ''))
-        # price=int(driver.find_element(By.ID,"item-info").find_elements(By.TAG_NAME,"span")[-1].text.replace(',', ''))
-        print("test price", price)
-        # data['purchase_price'] = int(price_dom.find_all('span')[-1].text.replace(',', ''))
-        data['purchase_price'] = int(driver.find_element(By.CSS_SELECTOR,"div[data-testid='price']").find_elements(By.TAG_NAME,"span")[1].text.replace(',', ''))
-        data['product_name'] = driver.find_element(By.XPATH, "//*[@id='item-info']/section[1]/div[1]/div/div/h1").text
-        # title_dom = dom.find('div', attrs={'data-testid': 'name'}) or dom.find('div', attrs={'data-testid': 'display-name'})
-        # data['product_name'] = convert_text(title_dom.div.h1.text)
-        
-        product_date = driver.find_element(By.XPATH, "//*[@id='item-info']/section[2]/p").text
 
-        data['nothing'] = False
+            
 
-        index = MERCARI.get(res['mercari'])
-        cindex = MERCARI.get(product_date)
-        
-        if cindex != None and index <= cindex:
-            print(source_url,"delete index",cindex)
+            driver.close()
+            # print("scrap result", data)
+            return data
+        except:
+            print("no price", source_url)
             data['nothing'] = True
-
-        
-
-        driver.close()
-        # print("scrap result", data)
-        return data
+            driver.close()
+            return data

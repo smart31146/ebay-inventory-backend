@@ -33,7 +33,7 @@ def config():
     return databases
 
 def scrape_data(url,row):
-    
+    # print("test url", url)
     engine = select_engine(url=url)
     if engine:
         engine = engine()
@@ -207,6 +207,9 @@ def main():
                 pid = str(row[0])
                 url = row[5]
                 ebay_url = row[6]
+                # if ebay_url != "https://www.ebay.com/itm/355984284267":
+                #     continue
+                # print("test day", days_ago)
                 if days_ago>30:
                     continue
 
@@ -218,7 +221,7 @@ def main():
                 #     continue
                 # # if pan_id > int(pid) :
                 #     continue
-                print(pid, "pan: ", row, "ago: ", days_ago)
+                # print(pid, "pan: ", row, "ago: ", days_ago)
                 
                 pan_id = int(pid)
                 
@@ -231,10 +234,32 @@ def main():
                   
                    
                     pid = str(data['row'][0])
+                    # print("test data", data)
                     url=data['row'][5]
                     ebay_url = data['row'][6]
-                    print("test nothing",data['nothing'] )
+                    # print(ebay_url, "test nothing",data['nothing'] )
                     if data['nothing'] !=True:
+                        sql1 = "SELECT * FROM product_product WHERE ebay_url = '" + ebay_url + "'"
+
+                        cur1 = conn.cursor()
+                        cur1.execute(sql1)
+                        row1 = cur1.fetchone()
+                        # print("test row1", row1)
+                        # time.sleep(10)
+                        
+                        
+                        if row1 != None and row1[16] == False:
+                            continue
+                        sql2 = "SELECT * FROM product_product WHERE purchase_url = '" + url + "'"
+
+                        cur2 = conn.cursor()
+                        cur2.execute(sql2)
+                        row2 = cur2.fetchone()
+                        # print("test row2", row2)
+                        # time.sleep(10)
+                        if row2 != None and row2[16] == False:
+                            continue
+
                         sql = "DELETE FROM product_deletedlist WHERE id = '" + pid + "'"
                         
                         cur.execute(sql)
@@ -248,35 +273,23 @@ def main():
 
                         cur.execute(sql)
                         conn.commit()
-                        # del_title= "delete alarm"
-                        # del_message= ''
-                        # if ebay_url != '':
-                        #     del_ebay_title=get_ebay_title(ebay_url, ebay_setting)
-                        # del_message += '【eBay】' + "\n"
-                        # if del_ebay_title != False :
-                        #     del_message += 'タイトル：' + del_ebay_title + "\n"
-                        # if del_ebay_title == False :
-                        #     del_message += 'タイトル：' + row[3] + "\n"
-                        
-                        # del_message += 'URL: ' + ebay_url + "\n"
-                        # del_message += '【フリマ】' +data['row'][5]+ "\n"
-                        
-                        # send_mail(FROM, PSW, TO, del_title, del_message)
-                        # set ebay product quantity 0
+                       
                         if ebay_url != '':
                             revise_item(ebay_url, ebay_setting)
                         print(url, "success recover",ebay_url )
-
+                        # time.sleep(10)
 
                     
                 except requests.ConnectTimeout:
-                    print("ConnectTimeout.")                    
+                    print("ConnectTimeout.")    
+                    # time.sleep(10)                
             
             pan_id = 0
             conn.close()
 
         except (Exception, psycopg2.DatabaseError) as error:
             print("connection xxx error",error)
+            # time.sleep(10)
 
         # time.sleep(600)
 
